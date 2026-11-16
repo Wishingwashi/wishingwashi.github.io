@@ -941,10 +941,13 @@ function kill(e){
   G.fx.push({k:'ring',x:p.x,y:p.y,r:70,t:.6,m:.6,c:'#e0a64a'});
  }
  if(lvu&&G.sp>0)toast('스탯 포인트 '+G.sp+'개 — W 키를 눌러 투자하세요');
- if(!e.boss)NET.rs=undefined;rollDrop(e);NET.rs=undefined;NET.shm=null;
+ var sd_=NET.on&&!e.boss&&NET.rs!==undefined,my_=sd_&&NET.rs>0;
+if(!e.boss)NET.rs=undefined;
+if(!sd_||my_){if(my_)NET.dcap=[];rollDrop(e);if(my_){var dl_=NET.dcap;NET.dcap=null;if(dl_.length)fsend({t:'dp',d:dl_.map(function(x){return{k:x.k,v:x.v,id:x.id,x:Math.round(x.x),y:Math.round(x.y),u:x.u}})})}}
+NET.rs=undefined;NET.shm=null;
 }
 function addDrop(d,e,dx){if(NET.on&&NET.rs!==undefined){if(NET.rs<=0)return;if(d.k==='coin')d.v=Math.max(1,Math.round(d.v*NET.rs));else if(NET.rs<1&&Math.random()>Math.min(1,NET.rs*2))return}
- d.x=clamp(e.x+(dx||0),20,W-20);d.y=clamp(e.y,20,H-20);d.life=40;d.ph=Math.random()*6;G.dr.push(d);
+ d.x=clamp(e.x+(dx||0),20,W-20);d.y=clamp(e.y,20,H-20);d.life=40;d.ph=Math.random()*6;if(NET.dcap){d.u=NET.me+'_'+(NET.du=(NET.du||0)+1);NET.dcap.push(d)}G.dr.push(d);
 }
 function armDrop(b){var tier=Math.floor(G.p.lvl/3)+G.floor-1+(b||0),lo=Math.min(Math.max(0,tier-2),11),c=[];for(var j=0;j<AR.length;j++)if(!AR[j].au&&AR[j].t<=tier&&AR[j].t>=lo)c.push(j);return c.length?{k:'armor',id:c[Math.floor(Math.random()*c.length)]}:null}
 function wpDrop(b){var t=Math.max(1,Math.min(WPN-1,Math.floor(G.p.lvl/3)+G.floor-1+(b||0)+(Math.random()<.4?1:0)));return{k:'weapon',id:t}}
@@ -1099,7 +1102,7 @@ function bossAI(e,dt){
  }
  var hp_=G.p;if(Math.hypot(e.x-hp_.x,e.y-hp_.y)<e.r+hp_.r&&hp_.inv<=0){hp_.inv=.6;takeDmg(e.mode==='dash'?e.dm*1.6:e.dm)}
 }
-function pickup(d){sfx(d.k==='coin'?'coin':'item');
+function pickup(d){if(d.u&&NET.on)fsend({t:'dx',u:d.u});sfx(d.k==='coin'?'coin':'item');
  if(d.k==='coin'){var cv_=Math.round(d.v*(1+cmpSum('coin')));G.gold+=cv_;ftxt(G.p.x,G.p.y-22,'+'+cv_,'#e0a64a')}
  else if(d.k==='skill'){var nu=d.b&&shopLocked(d.id);if(d.b)G.unl[d.id]=true;toast('스킬 습득: '+learnSkill(d.id)+(nu?' (상점 등록!)':''))}
  else if(d.k==='weapon'){
@@ -1611,7 +1614,7 @@ function update(dt){
  G.en=G.en.filter(function(e){return !e.dead});
  if(p.hp<=0){
   p.hp=0;G.state='dead';sfx('dead');
-  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (레벨만 Lv.1로 초기화, 나머지는 모두 유지)';
+  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (레벨·스탯 초기화, 코인·스킬·장비·동료는 유지)';
   $('dead').hidden=false;if(!(G.duel&&duelLose())&&NET.on){$('deadTxt').textContent+=' — 같은 방 친구가 관 앞에서 Space를 10초간 누르면 부활할 수 있습니다.';netDeath()}
  }
 }
@@ -1957,11 +1960,11 @@ function gearHTML(){
 function buyHTML(){
  var h='<h4>소모품</h4><div class="cards">'+card('buy','pot','물','체력 물약','사자마자 마시며 40% 회복. 가득 찬 상태면 남는 양의 절반이 초과 체력이 됩니다.',{t:'pot',price:30,dis:G.gold<30})+'</div>';
  h+='<h4>무기</h4><div class="cards">';var n=0,i;
- for(i=1;i<WP.length;i++)if(!WP[i].au&&G.owned.indexOf(i)<0){n++;h+=card('buy',i,'검',WP[i].n,wDesc(i),{t:'w',price:WP[i].p,dis:G.gold<WP[i].p})}
- h+='</div>'+(n?'':'<p class="hint">살 수 있는 무기를 모두 가졌습니다.</p>');
+ for(i=1;i<WP.length;i++)if(false){n++;h+=card('buy',i,'검',WP[i].n,wDesc(i),{t:'w',price:WP[i].p,dis:G.gold<WP[i].p})}
+ h+='</div>'+(n?'':'<p class="hint">무기는 상점에서 살 수 없습니다. 몬스터·보스 드롭이나 경매장에서 얻으세요.</p>');
  h+='<h4>방어구</h4><div class="cards">';n=0;
- for(i=0;i<AR.length;i++)if(!AR[i].au&&G.armor.indexOf(i)<0){n++;h+=card('buy',i,SLI[AR[i].s],AR[i].n,aDesc(i),{t:'a',price:AR[i].p,dis:G.gold<AR[i].p})}
- h+='</div>'+(n?'':'<p class="hint">살 수 있는 방어구를 모두 가졌습니다.</p>');
+ for(i=0;i<AR.length;i++)if(false){n++;h+=card('buy',i,SLI[AR[i].s],AR[i].n,aDesc(i),{t:'a',price:AR[i].p,dis:G.gold<AR[i].p})}
+ h+='</div>'+(n?'':'<p class="hint">방어구는 상점에서 살 수 없습니다. 몬스터·보스 드롭이나 경매장에서 얻으세요.</p>');
  var lk=0;for(i=0;i<NSK;i++)if(!SK[i].au&&shopLocked(i))lk++;
  h+='<h4>스킬 (같은 스킬을 여러 개 사서 강화소에서 합칠 수 있습니다)</h4><p class="hint">'+SHOP_LOCK+'코인 이상의 스킬은 보스에게서 한 번 얻으면 상점에 등록됩니다. (미등록 '+lk+'종)</p><div class="cards">';
  for(i=0;i<NSK;i++)if(!SK[i].au&&!shopLocked(i))h+=card('buy',i,SK[i].g,SK[i].n,skDesc(i)+(skTotal(i)?'<br>보유 '+skTotal(i)+'개':''),{t:'s',price:SK[i].p,dis:G.gold<SK[i].p});
@@ -1970,8 +1973,8 @@ function buyHTML(){
 }
 function sellHTML(){
  var h='<h4>스킬</h4><div class="cards">',n=0,i,L;
- for(i=0;i<NSK;i++)if(G.learned[i]){var c=skExtra(i);if(c>0){n++;h+=card('sell',i,SK[i].g,SK[i].n,'+0 복사본 한 개를 판매합니다.',{t:'s',l:1,n:c,price:sellSkillPrice(i,1)})}}
- h+='</div>'+(n?'':'<p class="hint">판매할 스킬이 없습니다.</p>');
+ for(i=0;i<NSK;i++)if(false){var c=skExtra(i);if(c>0){n++;h+=card('sell',i,SK[i].g,SK[i].n,'+0 복사본 한 개를 판매합니다.',{t:'s',l:1,n:c,price:sellSkillPrice(i,1)})}}
+ h+='</div>'+(n?'':'<p class="hint">스킬은 상점에 팔 수 없습니다. (경매장에서 판매할 수 있어요)</p>');
  h+='<h4>장비</h4><div class="cards">';n=0;
  G.owned.forEach(function(w){var ex=wExtra(w);if(ex>0&&WP[w].p>0){n++;h+=card('sell',w,'검',WP[w].n,wDesc(w),{t:'w',n:ex,price:Math.min(10000,Math.round(WP[w].p*.4))})}});
  G.armor.forEach(function(a){var ex=aExtra(a);if(ex>0){n++;h+=card('sell',a,SLI[AR[a].s],AR[a].n,aDesc(a),{t:'a',n:ex,price:Math.min(10000,Math.round(AR[a].p*.4))})}});
@@ -2278,11 +2281,11 @@ $('panel').addEventListener('click',function(ev){
  else if(a==='eqa'){var sl=AR[id].s;G.eqA[sl]=G.eqA[sl]===id?-1:id}
  else if(a==='buy'){
   if(t==='pot'){if(spend(30)){applyPotion();toast('체력 물약을 샀습니다')}}
-  else if(t==='w'){if(spend(WP[id].p)){addWp(id);toast(WP[id].n+' 구매')}}
-  else if(t==='a'){if(spend(AR[id].p)){addAr(id);var s2=AR[id].s;if(G.eqA[s2]<0)G.eqA[s2]=id;toast(AR[id].n+' 구매')}}
+  else if(t==='w'||t==='a'){toast('무기·방어구는 상점에서 살 수 없습니다')}
+  
   else if(t==='s'){if(spend(SK[id].p))toast('스킬 구매: '+learnSkill(id))}
  }else if(a==='sell'){
-  if(t==='s'){if(G.cp[id]&&skExtra(id)>0){var pr=sellSkillPrice(id,1);G.cp[id].c--;syncSk(id);G.gold+=pr;toast(SK[id].n+' 판매 +'+pr)}}
+  if(t==='s'){if(false){var pr=sellSkillPrice(id,1);G.cp[id].c--;syncSk(id);G.gold+=pr;toast(SK[id].n+' 판매 +'+pr)}}
   else if(t==='w'){var pw=Math.min(10000,Math.round(WP[id].p*.4));if(--G.wc[id]<=0){delete G.wc[id];delete G.wl[id];G.owned.splice(G.owned.indexOf(id),1)}G.gold+=pw;toast(WP[id].n+' 판매 +'+pw)}
   else if(t==='a'){var pa=Math.min(10000,Math.round(AR[id].p*.4));if(--G.ac[id]<=0){delete G.ac[id];delete G.al[id];G.armor.splice(G.armor.indexOf(id),1)}G.gold+=pa;toast(AR[id].n+' 판매 +'+pa)}
  }else if(a==='etab'){
@@ -2415,9 +2418,9 @@ $('panel').addEventListener('click',function(ev){
  }
  renderPanel();
 });
-function start(){G.state='play';$('start').hidden=true;$('dead').hidden=true;cv.focus();tutStart()}
+function start(){autoOn=true;G.state='play';$('start').hidden=true;$('dead').hidden=true;cv.focus();tutStart()}
 function restart(){if(G.trade)trClose();selfClear();duEnd();
- var o=G,keep={maxFloor:o.maxFloor,quest:o.quest,floorPick:o.floorPick,warps:o.warps,tix:o.tix,guards:o.guards||0,maxLv:o.maxLv,sell:o.sell,comp:o.comp,party:o.party,unl:o.unl,gold:o.gold+aucRefund(o),learned:o.learned,lv:o.lv,cp:o.cp,slots:o.slots,scr:o.scr,scrolls:o.scrolls,ult:o.ult,ultcd:o.ultcd,owned:o.owned,wc:o.wc,wl:o.wl,eq:o.eq,armor:o.armor,ac:o.ac,al:o.al,eqA:o.eqA,st:o.st,sp:o.sp,floor:(o.floor>=20000?1:o.floor)};
+ var o=G,keep={maxFloor:o.maxFloor,quest:o.quest,floorPick:o.floorPick,warps:o.warps,tix:o.tix,guards:o.guards||0,maxLv:o.maxLv,sell:o.sell,comp:o.comp,party:o.party,unl:o.unl,gold:o.gold+aucRefund(o),learned:o.learned,lv:o.lv,cp:o.cp,slots:o.slots,scr:o.scr,scrolls:o.scrolls,ult:o.ult,ultcd:o.ultcd,owned:o.owned,wc:o.wc,wl:o.wl,eq:o.eq,armor:o.armor,ac:o.ac,al:o.al,eqA:o.eqA,floor:(o.floor>=20000?1:o.floor)};
  reset();for(var kx in keep)G[kx]=keep[kx];
  var pp=G.p;pp.lvl=1;pp.xp=0;recalc(true);
  syncParty();
@@ -2466,7 +2469,7 @@ window.addEventListener('keydown',function(e){
 window.addEventListener('keyup',function(e){keys[e.code]=false});
 window.addEventListener('blur',function(){keys={}});
 
-function frame(ts){
+function frame(ts){BGF=performance.now();
  var dt=Math.min(.05,(ts-last)/1000||0);last=ts;
  NET.lc=NET.on?leaderId():NET.me;if(G.state==='play'){tickAuction(dt);tickSlot(dt);tickQuest(dt)}
  if(G.state==='play'&&!G.ui){if(G.scene==='field')update(dt);else updateTown(dt)}
@@ -2581,7 +2584,7 @@ function clientRecv(d){
   var e=G.en.filter(function(z){return z.id===d.i&&!z.dead})[0];
   if(e){NET.rs=d.sh?(d.sh[NET.me]||0):(d.lh===NET.me?1:0);NET.shm=e.boss&&d.sh?d.sh:null;NET.sd=d.sd;kill(e)}
  }
- else if(d.t==='fx')recvFx(d);
+ else if(d.t==='dp')recvDrops(d);else if(d.t==='dx')recvDx(d);else if(d.t==='fx')recvFx(d);
  else if(d.t==='c')chatAdd(d.n,d.s);
  else if(d.t==='tr')trRecv(d);
  else if(d.t==='du')duRecv(d);
@@ -3164,7 +3167,7 @@ function duelLose(){
  duSend(D.w,{a:'lose',l:{g:half,w:w,a:ar,sc:G.scrolls|0,gd:G.guards|0,wp:G.warps|0}});
  G.gold-=half;G.scrolls=0;G.guards=0;G.warps=0;
  duEnd();
- $('deadTxt').textContent='1v1에서 패배했습니다 — 코인 '+fmtN(half)+'개와 장비·소모품을 모두 떨어뜨렸습니다 (스킬·동료는 유지). 부활 시 레벨이 Lv.1로 초기화됩니다.';
+ $('deadTxt').textContent='1v1에서 패배했습니다 — 코인 '+fmtN(half)+'개와 장비·소모품을 모두 떨어뜨렸습니다 (스킬·동료는 유지). 부활 시 레벨과 스탯이 초기화됩니다.';
  return true;
 }
 function duWin(l){
@@ -3257,7 +3260,7 @@ function initTitleCheat(){
 }
 /* ---------- 튜토리얼 ---------- */
 var TUT={on:false,i:0,b:{},ok:false,okT:0,done:false},TUT_GIFT=150; /* 튜토리얼 지원금(코인). 0이면 지급 안 함 */
-try{TUT.done=localStorage.getItem('ddtut')==='1'}catch(e){}
+try{TUT.done=localStorage.getItem('ddtut2')==='1'}catch(e){}TUT.force=!TUT.done;
 function skCnt(){var n=0,k;for(k in G.cp)n+=G.cp[k].c;return n}
 var TS=[
  {t:'이동하기',d:'방향키 ←↑↓→ 로 캐릭터를 움직여 보세요.',
@@ -3288,7 +3291,7 @@ function tutRender(){
  if(!TUT.on){e.hidden=true;return}
  var s=TS[TUT.i],n=TS.length;
  e.hidden=false;
- e.innerHTML='<div class="tut-n">튜토리얼 '+(TUT.i+1)+'/'+n+'</div><div class="tut-b"><b>'+s.t+(TUT.ok?'<span class="tut-ok">✔ 완료!</span>':'')+'</b><span>'+s.d+'</span><div class="tut-bar"><i style="width:'+((TUT.i+(TUT.ok?1:0))/n*100)+'%"></i></div></div><div class="tut-btns"><button class="btn" data-ta="next">'+(s.last?'시작하기!':'다음 ▶')+'</button>'+(s.last?'':'<button class="btn sub" data-ta="end">튜토리얼 끝내기</button>')+'</div>';
+ e.innerHTML='<div class="tut-n">튜토리얼 '+(TUT.i+1)+'/'+n+'</div><div class="tut-b"><b>'+s.t+(TUT.ok?'<span class="tut-ok">✔ 완료!</span>':'')+'</b><span>'+s.d+'</span><div class="tut-bar"><i style="width:'+((TUT.i+(TUT.ok?1:0))/n*100)+'%"></i></div></div><div class="tut-btns">'+((s.info||!TUT.force)?'<button class="btn" data-ta="next">'+(s.last?'시작하기!':'다음 ▶')+'</button>':'')+''+((s.last||TUT.force)?'':'<button class="btn sub" data-ta="end">튜토리얼 끝내기</button>')+'</div>';
 }
 function tutInit(){
  var s=TS[TUT.i];TUT.b={};TUT.ok=false;TUT.okT=0;
@@ -3299,14 +3302,14 @@ function tutNext(){
  if(TUT.i>=TS.length-1){tutEnd(true);return}
  TUT.i++;tutInit();
 }
-function tutEnd(fin){
- TUT.on=false;TUT.done=true;
- try{localStorage.setItem('ddtut','1')}catch(e){}
+function tutEnd(fin){if(!fin&&TUT.force)return;
+ TUT.on=false;TUT.done=true;TUT.force=false;
+ try{localStorage.setItem('ddtut2','1')}catch(e){}
  tutHide();
  if(fin)toast('튜토리얼 완료! 이제 던전을 정복하세요');
 }
 function tutStart(force){
- if(TUT.done&&!force)return;
+ if(TUT.done&&!force)return;if(force===true&&TUT.done)TUT.force=false;
  if(G.state!=='play')return;
  if(force||!TUT.on){TUT.on=true;TUT.i=0}
  tutInit();
@@ -3334,7 +3337,7 @@ function tutDraw(){
  });
  if(b)b.onclick=function(){
   if(G.state==='play')tutStart(true);
-  else{TUT.done=false;try{localStorage.removeItem('ddtut')}catch(x){}toast('게임을 시작하면 튜토리얼이 나옵니다')}
+  else{TUT.done=false;try{localStorage.removeItem('ddtut2')}catch(x){}toast('게임을 시작하면 튜토리얼이 나옵니다')}
   cv.focus();
  };
 })();
@@ -3346,12 +3349,12 @@ function canSave(){return G.state==='play'&&!G.arena&&!(G.trade&&G.trade.esc)}
 function saveStr(){
  var o={v:1,time:Date.now(),scene:G.scene,lvl:G.p.lvl,xp:G.p.xp};
  SAVE_F.forEach(function(k){o[k]=G[k]});
- o.gold=G.gold+aucRefund(G); /* 경매 예치금은 환급해서 저장 */
+ o.gold=G.gold+aucRefund(G);o.tut=TUT.done?1:0; /* 경매 예치금은 환급해서 저장 */
  return JSON.stringify(o);
 }
 function doSave(quiet){
  if(!canSave()){if(!quiet)toast('지금은 저장할 수 없습니다 (1v1·거래 중이거나 사망 상태)');return false}
- try{localStorage.setItem(SAVE_KEY,saveStr());autoOn=true;if(!quiet)toast('저장 완료 — Lv.'+G.p.lvl+' · '+(G.scene==='town'?'마을':G.floor+'층'));return true}
+ try{var _s=saveStr();localStorage.setItem(SAVE_KEY,_s);autoOn=true;fbPushSoon(_s,!quiet);if(!quiet)toast('저장 완료 — Lv.'+G.p.lvl+' · '+(G.scene==='town'?'마을':G.floor+'층'));return true}
  catch(e){if(!quiet)toast('저장 실패: 브라우저 저장소를 쓸 수 없습니다');return false}
 }
 function applySave(o){
@@ -3365,12 +3368,12 @@ function applySave(o){
  if(G.owned.indexOf(G.eq)<0)G.eq=G.owned[0];
  G.floor=Math.max(1,G.floor|0);
  p.lvl=Math.max(1,o.lvl|0);p.xp=Math.max(0,o.xp|0);recalc(true);
- G.fk=0;G.fpos={x:W/2,y:H-70};
+ G.fk=0;G.fpos={x:W/2,y:H-70};if(o.tut){TUT.done=true;TUT.force=false;TUT.on=false;tutHide();try{localStorage.setItem('ddtut2','1')}catch(e){}}
  if(o.scene==='town'){G.scene='town';p.x=W/2;p.y=450}
  syncParty();
 }
 function loadSave(fromStr){
- if(NET.on){toast('멀티플레이 중에는 불러올 수 없습니다. 방에서 나간 뒤 이용하세요');return false}
+ if(NET.on||NET.peer){netReset();LB.role='';LB.busy=false}
  var s=fromStr;
  try{if(!s)s=localStorage.getItem(SAVE_KEY)}catch(e){}
  if(!s){toast('저장된 게임이 없습니다');return false}
@@ -3406,6 +3409,182 @@ function exportSave(){
  window.addEventListener('pagehide',function(){if(autoOn)doSave(true)});
 })();
 
+/* ---------- 패치 6: 월드 로비 · 구글 계정 저장 ---------- */
+var FB_CONFIG={"apiKey":"AIzaSyDMgOlCKavJRood1eZUxTd-euGTk0IXAlM","authDomain":"daggerdungeon.firebaseapp.com","projectId":"daggerdungeon","appId":"1:964467594635:web:fe88f5cf17bad75fd9cb8e"};
+var LB_MAX=8,LB_SH=4,LB={want:true,busy:false,role:'',sh:0,btn:null},FB={ready:false,loading:false,user:null,auth:null,db:null,last:0,btn:null};
+try{LB.want=localStorage.getItem('ddlobby')!=='0'}catch(e){}
+function lbLabel(){if(LB.btn)LB.btn.textContent='🌐 월드 로비: '+(LB.want?'ON':'OFF')}
+function lbRetry(){
+ if(!LB.want)return;
+ LB.busy=true;
+ setTimeout(function(){LB.busy=false;if(LB.want&&G.state==='play'&&!NET.peer)lbEnter(1)},500+Math.random()*2500);
+}
+function lbEnter(sh){
+ if(LB.busy)return;
+ if(typeof Peer==='undefined'){netStatus('PeerJS를 불러오지 못해 월드 로비에 접속할 수 없습니다');return}
+ LB.busy=true;LB.role='';netReset();
+ var id='dagger-dungeon-lobby-'+sh,pr=new Peer(id),done=false;NET.peer=pr;
+ netStatus('월드 로비 접속 중… ('+sh+'번 채널)');
+ pr.on('open',function(){done=true;LB.busy=false;LB.role='host';LB.sh=sh;NET.host=true;netStatus('월드 로비 '+sh+'번 채널 — 내가 방장입니다');toast('월드 로비에 입장했습니다 (방장)')});
+ pr.on('connection',function(c){
+  if(NET.conns.length>=LB_MAX){c.on('open',function(){send(c,{t:'lbfull'});setTimeout(function(){try{c.close()}catch(e){}},300)});return}
+  netBindHost(c);
+ });
+ pr.on('error',function(e){
+  if(done)return;
+  done=true;
+  if(e&&e.type==='unavailable-id'){try{pr.destroy()}catch(x){}lbJoin(sh,id)}
+  else{LB.busy=false;try{pr.destroy()}catch(x){}NET.peer=null;lbRetry()}
+ });
+}
+function lbJoin(sh,id){
+ var cp=new Peer(),ok=false;NET.peer=cp;
+ function fail(){if(ok||NET.peer!==cp)return;LB.busy=false;try{cp.destroy()}catch(x){}NET.peer=null;lbRetry()}
+ cp.on('open',function(){
+  var c=cp.connect(id,{reliable:true});
+  netBindClient(c);
+  c.on('open',function(){ok=true;LB.busy=false;LB.role='client';LB.sh=sh;netStatus('월드 로비 '+sh+'번 채널에 접속했습니다')});
+  c.on('data',function(d){
+   if(d&&d.t==='lbfull'){
+    LB.role='';try{cp.destroy()}catch(x){}NET.peer=null;NET.conns=[];NET.on=false;LB.busy=false;
+    if(sh<LB_SH)lbEnter(sh+1);
+    else{LB.want=false;lbLabel();netStatus('월드 로비가 가득 찼습니다');toast('월드 로비가 가득 찼습니다. 잠시 후 다시 시도하세요')}
+   }
+  });
+ });
+ cp.on('error',fail);
+ setTimeout(fail,12000);
+}
+function lbWatch(){
+ if(!LB.want||LB.busy||G.state!=='play'||TUT.force)return;
+ var pr=NET.peer;
+ if(!pr){lbEnter(1);return}
+ if(LB.role==='host'){
+  if(pr.destroyed){NET.peer=null;LB.role=''}
+  else if(pr.disconnected){try{pr.reconnect()}catch(e){}}
+ }else if(LB.role==='client'){
+  var c=NET.conns[0];
+  if(!NET.on||!c||!c.open){LB.role='';try{pr.destroy()}catch(e){}NET.peer=null;lbRetry()}
+ }
+}
+function updCont(){
+ var st=$('start'),sb=$('btnStart');if(!st||!sb)return;
+ var cb=null;Array.prototype.forEach.call(st.querySelectorAll('button'),function(b){if(b.textContent==='이어하기')cb=b});
+ if(!cb){cb=document.createElement('button');cb.className='btn';cb.textContent='이어하기';cb.onclick=function(){loadSave()};sb.parentNode.insertBefore(cb,sb)}
+ var h=hasSave();cb.hidden=!h;sb.textContent=h?'새로 시작':'시작하기';
+}
+function fbPush(s,loud){
+ if(!FB.user||!FB.db||!s)return;
+ var t=0;try{t=JSON.parse(s).time||0}catch(e){}
+ FB.db.collection('users').doc(FB.user.uid).set({data:s,time:t||Date.now(),v:1,name:FB.user.displayName||''})
+  .then(function(){if(loud)toast('☁ 구글 계정에 저장했습니다')})
+  .catch(function(){toast('☁ 클라우드 저장 실패 — 인터넷과 Firebase 설정을 확인하세요')});
+}
+function fbPushSoon(s,loud){
+ if(!FB.user)return;
+ if(!loud&&Date.now()-FB.last<60000)return;
+ FB.last=Date.now();fbPush(s,loud);
+}
+function fbSync(){
+ var u=FB.user;if(!u||!FB.db)return;
+ FB.db.collection('users').doc(u.uid).get().then(function(d){
+  var c=d.exists?d.data():null,ls=null,lt=0,ct=c?(c.time||0):0;
+  try{ls=localStorage.getItem(SAVE_KEY);if(ls)lt=JSON.parse(ls).time||0}catch(e){ls=null;lt=0}
+  if(c&&c.data&&ct>lt){
+   if(G.state==='play'){
+    if(confirm('구글 계정에 더 최신 저장이 있습니다. 불러올까요?\n(취소하면 지금 진행 상황이 유지됩니다)')){try{localStorage.setItem(SAVE_KEY,c.data)}catch(e){}loadSave(c.data)}
+   }else{
+    try{localStorage.setItem(SAVE_KEY,c.data)}catch(e){}
+    autoOn=false;updCont();toast('☁ 구글 저장을 가져왔습니다 — 「이어하기」를 누르세요');
+   }
+  }else if(ls&&lt>ct)fbPush(ls,false);
+ }).catch(function(){toast('☁ 클라우드 저장을 불러오지 못했습니다')});
+}
+function fbUi(){if(FB.btn)FB.btn.textContent=FB.user?'☁ '+(FB.user.displayName||'구글')+' (로그아웃)':'☁ 구글 로그인'}
+function fbUser(u){FB.user=u||null;fbUi();if(u){toast('☁ 구글 로그인: '+(u.displayName||u.email||''));fbSync()}}
+function fbInit(cb){
+ if(!FB_CONFIG||FB.ready){if(cb)cb();return}
+ if(FB.loading)return;
+ FB.loading=true;
+ var u=['https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js','https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'],i=0;
+ (function nx(){
+  if(i>=u.length){
+   try{if(!firebase.apps.length)firebase.initializeApp(FB_CONFIG);FB.auth=firebase.auth();FB.db=firebase.firestore();FB.ready=true;FB.loading=false;FB.auth.onAuthStateChanged(fbUser);if(cb)cb()}
+   catch(e){FB.loading=false;toast('구글 저장 초기화에 실패했습니다')}
+   return;
+  }
+  var s=document.createElement('script');s.src=u[i++];s.onload=nx;
+  s.onerror=function(){FB.loading=false;toast('Firebase 라이브러리를 불러오지 못했습니다')};
+  document.head.appendChild(s);
+ })();
+}
+function fbLogin(){
+ if(!FB_CONFIG){toast('구글 저장은 아직 설정되지 않았습니다 (패치 도구에 Firebase 설정을 넣어 다시 패치하세요)');return}
+ if(!FB.ready){fbInit(function(){toast('준비되었습니다. 한 번 더 눌러 로그인하세요')});return}
+ if(FB.user){if(confirm('구글 계정 ('+(FB.user.displayName||FB.user.email||'')+') 에서 로그아웃할까요?'))FB.auth.signOut();return}
+ FB.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e){toast('로그인 실패: '+((e&&e.code)||'오류'))});
+}
+(function(){
+ var row=$('netHost')&&$('netHost').parentNode;if(!row)return;
+ function mk(t,fn){var b=document.createElement('button');b.className='btn';b.style.cssText='padding:4px 12px;font-size:13px';b.textContent=t;b.onclick=function(){fn();cv.focus()};row.appendChild(b);return b}
+ LB.btn=mk('🌐 월드 로비',function(){
+  LB.want=!LB.want;try{localStorage.setItem('ddlobby',LB.want?'1':'0')}catch(e){}
+  lbLabel();
+  if(LB.want){
+   if(G.state!=='play')toast('게임을 시작하면 월드 로비에 접속합니다');
+   else if(TUT.force)toast('튜토리얼을 마치면 월드 로비에 접속할 수 있습니다');
+   else{LB.busy=false;NET.peer=null;lbEnter(1)}
+  }else if(LB.role){LB.busy=false;netReset();LB.role='';netStatus('대기 중');toast('월드 로비에서 나왔습니다')}
+ });
+ lbLabel();
+ FB.btn=mk('☁ 구글 로그인',fbLogin);
+ updCont();
+ if(FB_CONFIG)fbInit(null);
+ setInterval(lbWatch,2500);
+})();
+
+/* ===== 패치: 튜토리얼 왼쪽 배치 / 버튼 제거 / 백그라운드 동작 / 드롭 공유 ===== */
+var BGF=0,BGL=performance.now();
+(function(){
+ var st=document.createElement('style');
+ st.textContent='#tut{position:fixed;left:12px;top:90px;width:210px;z-index:30;flex-direction:column;align-items:stretch;gap:8px;max-height:calc(100vh - 110px);overflow:auto}#tut .tut-b{min-width:0}@media(max-width:1260px){#tut{top:auto;bottom:12px;width:190px;opacity:.94}}';
+ document.head.appendChild(st);
+ var row=$('netHost')&&$('netHost').parentNode,rm=['튜토리얼','💾 저장','📂 이어하기','내보내기','가져오기'];
+ if(row)Array.prototype.slice.call(row.children).forEach(function(b){if(b.tagName==='BUTTON'&&rm.indexOf(b.textContent.trim())>=0)b.remove()});
+})();
+/* 탭이 가려져도(방장·리더가 다른 창을 써도) 몹 시뮬레이션과 네트워크 중계가 계속 돌게 함 */
+function bgStep(){
+ var now=performance.now();
+ if(now-BGF<300){BGL=now;return}
+ var dt=Math.min(.1,(now-BGL)/1000||0),n=dt>.05?2:1,i;BGL=now;
+ NET.lc=NET.on?leaderId():NET.me;
+ if(G.state==='play'){
+  G.p.inv=Math.max(G.p.inv,.3); /* 자리를 비운 동안 죽지 않게 */
+  for(i=0;i<n;i++){tickAuction(dt/n);tickSlot(dt/n);tickQuest(dt/n);if(!G.ui){if(G.scene==='field')update(dt/n);else updateTown(dt/n)}}
+ }
+ netTick(now);
+}
+(function(){
+ var f=function(){try{bgStep()}catch(e){}},tm=function(){setInterval(f,100)};
+ try{
+  var w=new Worker(URL.createObjectURL(new Blob(['setInterval(function(){postMessage(1)},50)'],{type:'text/javascript'})));
+  w.onmessage=f;w.onerror=tm;
+ }catch(e){tm()}
+})();
+/* 몹 드롭 공유 */
+function recvDrops(d){
+ if(!d||d.f!==G.floor||G.scene!=='field'||G.state!=='play'||!Array.isArray(d.d))return;
+ d.d.slice(0,20).forEach(function(x){
+  if(!x||!x.u||G.dr.some(function(q){return q.u===x.u}))return;
+  var k=x.k,o={k:k,x:clamp(+x.x||0,20,W-20),y:clamp(+x.y||0,20,H-20),life:40,ph:Math.random()*6,u:String(x.u).slice(0,20)};
+  if(k==='coin')o.v=clamp(+x.v||1,1,1e9);
+  else if(k==='weapon'&&x.id>0&&x.id<WP.length)o.id=x.id|0;
+  else if(k==='armor'&&x.id>=0&&x.id<AR.length)o.id=x.id|0;
+  else if(k!=='potion')return;
+  G.dr.push(o);
+ });
+}
+function recvDx(d){if(!d||d.f!==G.floor)return;G.dr.forEach(function(q){if(q.u===d.u)q.life=0})}
 initTitleCheat();
 preloadFonts();
 netInit();
