@@ -1611,7 +1611,7 @@ function update(dt){
  G.en=G.en.filter(function(e){return !e.dead});
  if(p.hp<=0){
   p.hp=0;G.state='dead';sfx('dead');
-  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (코인·스킬·동료 유지, 부활 시 Lv.'+Math.max(1,Math.floor(p.lvl/2))+')';
+  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (레벨만 Lv.1로 초기화, 나머지는 모두 유지)';
   $('dead').hidden=false;if(!(G.duel&&duelLose())&&NET.on){$('deadTxt').textContent+=' — 같은 방 친구가 관 앞에서 Space를 10초간 누르면 부활할 수 있습니다.';netDeath()}
  }
 }
@@ -2417,9 +2417,9 @@ $('panel').addEventListener('click',function(ev){
 });
 function start(){G.state='play';$('start').hidden=true;$('dead').hidden=true;cv.focus();tutStart()}
 function restart(){if(G.trade)trClose();selfClear();duEnd();
- var o=G,keep={maxFloor:o.maxFloor,quest:o.quest,floorPick:o.floorPick,warps:o.warps,tix:o.tix,guards:o.guards||0,maxLv:o.maxLv,sell:o.sell,comp:o.comp,party:o.party,unl:o.unl,gold:o.gold+aucRefund(o),learned:o.learned,lv:o.lv,cp:o.cp,slots:o.slots,scr:o.scr,scrolls:o.scrolls,ult:o.ult,ultcd:o.ultcd};
+ var o=G,keep={maxFloor:o.maxFloor,quest:o.quest,floorPick:o.floorPick,warps:o.warps,tix:o.tix,guards:o.guards||0,maxLv:o.maxLv,sell:o.sell,comp:o.comp,party:o.party,unl:o.unl,gold:o.gold+aucRefund(o),learned:o.learned,lv:o.lv,cp:o.cp,slots:o.slots,scr:o.scr,scrolls:o.scrolls,ult:o.ult,ultcd:o.ultcd,owned:o.owned,wc:o.wc,wl:o.wl,eq:o.eq,armor:o.armor,ac:o.ac,al:o.al,eqA:o.eqA,st:o.st,sp:o.sp,floor:(o.floor>=20000?1:o.floor)};
  reset();for(var kx in keep)G[kx]=keep[kx];
- var hl=Math.max(1,Math.floor(o.p.lvl/2)),pp=G.p;pp.lvl=hl;pp.xp=0;G.sp=0;for(var sl=2;sl<=hl;sl++)G.sp+=statPointsForLevel(sl);recalc(true);
+ var pp=G.p;pp.lvl=1;pp.xp=0;recalc(true);
  syncParty();
  $('panel').hidden=true;$('toasts').innerHTML='';start();if(G.sp>0)toast('스탯 포인트 '+G.sp+'개 — W 키를 눌러 투자하세요')}
 $('btnStart').addEventListener('click',start);
@@ -3164,7 +3164,7 @@ function duelLose(){
  duSend(D.w,{a:'lose',l:{g:half,w:w,a:ar,sc:G.scrolls|0,gd:G.guards|0,wp:G.warps|0}});
  G.gold-=half;G.scrolls=0;G.guards=0;G.warps=0;
  duEnd();
- $('deadTxt').textContent='1v1에서 패배했습니다 — 코인 '+fmtN(half)+'개와 장비·소모품을 모두 떨어뜨렸습니다 (스킬·동료는 유지). 부활 시 Lv.'+Math.max(1,Math.floor(p.lvl/2));
+ $('deadTxt').textContent='1v1에서 패배했습니다 — 코인 '+fmtN(half)+'개와 장비·소모품을 모두 떨어뜨렸습니다 (스킬·동료는 유지). 부활 시 레벨이 Lv.1로 초기화됩니다.';
  return true;
 }
 function duWin(l){
@@ -3338,6 +3338,74 @@ function tutDraw(){
   cv.focus();
  };
 })();
+/* ---------- 저장 / 이어하기 (패치 4) ---------- */
+var SAVE_KEY='ddsave1',autoOn=false,
+SAVE_F=['gold','kills','floor','maxFloor','maxLv','sp','tix','guards','warps','scrolls','ultcd','eq','owned','wc','wl','armor','ac','al','eqA','learned','lv','cp','slots','scr','ult','unl','comp','party','quest','sell','st'];
+function hasSave(){try{return !!localStorage.getItem(SAVE_KEY)}catch(e){return false}}
+function canSave(){return G.state==='play'&&!G.arena&&!(G.trade&&G.trade.esc)}
+function saveStr(){
+ var o={v:1,time:Date.now(),scene:G.scene,lvl:G.p.lvl,xp:G.p.xp};
+ SAVE_F.forEach(function(k){o[k]=G[k]});
+ o.gold=G.gold+aucRefund(G); /* 경매 예치금은 환급해서 저장 */
+ return JSON.stringify(o);
+}
+function doSave(quiet){
+ if(!canSave()){if(!quiet)toast('지금은 저장할 수 없습니다 (1v1·거래 중이거나 사망 상태)');return false}
+ try{localStorage.setItem(SAVE_KEY,saveStr());autoOn=true;if(!quiet)toast('저장 완료 — Lv.'+G.p.lvl+' · '+(G.scene==='town'?'마을':G.floor+'층'));return true}
+ catch(e){if(!quiet)toast('저장 실패: 브라우저 저장소를 쓸 수 없습니다');return false}
+}
+function applySave(o){
+ if(!o||o.v!==1)throw new Error('bad');
+ reset();var p=G.p;
+ SAVE_F.forEach(function(k){if(o[k]!==undefined&&o[k]!==null)G[k]=o[k]});
+ G.st=Object.assign({hp:0,mp:0,atk:0,def:0,spd:0},o.st||{});
+ G.eqA=Object.assign({head:-1,body:-1,feet:-1,hand:-1},o.eqA||{});
+ while(G.slots.length<10)G.slots.push(-1);G.slots=G.slots.slice(0,10);
+ if(!G.owned||!G.owned.length){G.owned=[0];G.wc={0:1}}
+ if(G.owned.indexOf(G.eq)<0)G.eq=G.owned[0];
+ G.floor=Math.max(1,G.floor|0);
+ p.lvl=Math.max(1,o.lvl|0);p.xp=Math.max(0,o.xp|0);recalc(true);
+ G.fk=0;G.fpos={x:W/2,y:H-70};
+ if(o.scene==='town'){G.scene='town';p.x=W/2;p.y=450}
+ syncParty();
+}
+function loadSave(fromStr){
+ if(NET.on){toast('멀티플레이 중에는 불러올 수 없습니다. 방에서 나간 뒤 이용하세요');return false}
+ var s=fromStr;
+ try{if(!s)s=localStorage.getItem(SAVE_KEY)}catch(e){}
+ if(!s){toast('저장된 게임이 없습니다');return false}
+ try{applySave(JSON.parse(s))}catch(e){toast('저장 데이터를 읽을 수 없습니다');reset();return false}
+ $('panel').hidden=true;$('toasts').innerHTML='';
+ start();autoOn=true;toast('이어하기 — Lv.'+G.p.lvl+' · '+(G.scene==='town'?'마을':G.floor+'층'));
+ return true;
+}
+function exportSave(){
+ if(!canSave()){toast('지금은 내보낼 수 없습니다');return}
+ var b=new Blob([saveStr()],{type:'application/json'}),a=document.createElement('a');
+ a.href=URL.createObjectURL(b);a.download='dagger-dungeon-save.json';document.body.appendChild(a);a.click();
+ setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);toast('저장 파일을 내려받았습니다');
+}
+(function(){
+ var row=$('netHost')&&$('netHost').parentNode;if(!row)return;
+ function mk(t,fn){var b=document.createElement('button');b.className='btn';b.style.cssText='padding:4px 12px;font-size:13px';b.textContent=t;b.onclick=function(){fn();cv.focus()};row.appendChild(b);return b}
+ mk('💾 저장',function(){doSave(false)});
+ mk('📂 이어하기',function(){if(G.state!=='play'||confirm('현재 진행 중인 게임을 저장된 게임으로 바꿀까요?'))loadSave()});
+ mk('내보내기',exportSave);
+ var fi=document.createElement('input');fi.type='file';fi.accept='.json,application/json';fi.hidden=true;document.body.appendChild(fi);
+ fi.onchange=function(){var f=fi.files&&fi.files[0];if(!f)return;var r=new FileReader();r.onload=function(){if(G.state!=='play'||confirm('현재 진행 중인 게임을 파일의 게임으로 바꿀까요?'))loadSave(String(r.result))};r.readAsText(f);fi.value=''};
+ mk('가져오기',function(){fi.click()});
+ var sb=$('btnStart');
+ if(sb&&hasSave()){
+  var cb=document.createElement('button');cb.className='btn';cb.textContent='이어하기';
+  cb.onclick=function(){loadSave()};sb.parentNode.insertBefore(cb,sb);
+  sb.textContent='새로 시작';
+ }
+ autoOn=!hasSave(); /* 저장본이 있으면 이어하기/수동 저장 전까지 자동 저장이 덮어쓰지 않음 */
+ setInterval(function(){if(autoOn)doSave(true)},30000);
+ document.addEventListener('visibilitychange',function(){if(document.hidden&&autoOn)doSave(true)});
+ window.addEventListener('pagehide',function(){if(autoOn)doSave(true)});
+})();
+
 initTitleCheat();
 preloadFonts();
 netInit();
