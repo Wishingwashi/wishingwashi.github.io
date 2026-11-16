@@ -3547,7 +3547,7 @@ function fbLogin(){
 var BGF=0,BGL=performance.now();
 (function(){
  var st=document.createElement('style');
- st.textContent='#tut{position:fixed;left:12px;top:90px;width:210px;z-index:30;flex-direction:column;align-items:stretch;gap:8px;max-height:calc(100vh - 110px);overflow:auto}#tut .tut-b{min-width:0}@media(max-width:1260px){#tut{top:auto;bottom:12px;width:190px;opacity:.94}}';
+ st.textContent='#tut{position:fixed;left:12px;top:90px;width:320px;z-index:30;flex-direction:column;align-items:stretch;gap:12px;padding:16px 18px;border-width:2px;border-left-width:6px;box-shadow:0 0 24px rgba(224,166,74,.3);max-height:calc(100vh - 110px);overflow:auto}#tut .tut-b{min-width:0}#tut .tut-n{font-size:15px}#tut .tut-b b{font-size:25px;line-height:1.3}#tut .tut-b span{display:block;margin-top:6px;font-size:17px;line-height:1.6;color:#c4cfdb}#tut .tut-bar{height:5px;margin-top:10px}#tut .tut-btns .btn{padding:8px 18px;font-size:16px}@media(max-width:1260px){#tut{top:auto;bottom:12px;width:270px;opacity:.96}#tut .tut-b b{font-size:21px}#tut .tut-b span{font-size:15px}}';
  document.head.appendChild(st);
  var row=$('netHost')&&$('netHost').parentNode,rm=['튜토리얼','💾 저장','📂 이어하기','내보내기','가져오기'];
  if(row)Array.prototype.slice.call(row.children).forEach(function(b){if(b.tagName==='BUTTON'&&rm.indexOf(b.textContent.trim())>=0)b.remove()});
