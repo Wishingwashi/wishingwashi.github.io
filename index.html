@@ -1018,7 +1018,7 @@ function utStartPat(e){
  var p=G.p;p.x=UT.x+UT.w/2;p.y=UT.y+UT.h/2;p.inv=Math.max(p.inv,.8);G.ep=[];
  G.fx.push({k:'ring',x:p.x,y:p.y,r:60,t:.4,m:.4,c:'#ffffff'});
 }
-function utFire(e,x,y,an,sp){G.ep.push({x:x,y:y,vx:Math.cos(an)*sp,vy:Math.sin(an)*sp,r:6,dm:Math.round(e.dm*.45),life:9})}
+function utFire(e,x,y,an,sp){G.ep.push({x:x,y:y,vx:Math.cos(an)*sp,vy:Math.sin(an)*sp,r:6,dm:Math.max(1,Math.min(Math.round(e.dm*.45),Math.round(G.p.mhp*.02))),life:9})}
 function utRun(e,k,dt,sc){
   var i,n,x,y,gx;
   e['c'+k]-=dt;if(e['c'+k]>0)return;
