@@ -704,7 +704,7 @@ var AUC_RESET=180,CHEAT_WARPS=10; /* 경매 물품 교체 주기(초) / 테스�
 var TIX_ONCE=true,CMP_AS=.5,AUC_REFUND=.5,AUC_WHALE=.03; /* 레벨당 스탯 포인트 / 소환권은 최고 레벨 갱신 시에만 지급 / 동료 공격 속도 배율 / 경매 포기 환급률 / 판매 시 큰손(5~10배) 입찰 확률 */
 var STATS=[{id:'hp',n:'체력',g:'체',d:'최대 체력 +12',f:function(n){return '+'+Math.round(n*12)}},{id:'mp',n:'마나',g:'마',d:'최대 마나 +5',f:function(n){return '+'+Math.round(n*5)}},{id:'atk',n:'공격력',g:'공',d:'모든 피해 +3%',f:function(n){return '+'+Math.round(n*3)+'%'}},{id:'def',n:'방어력',g:'방',d:'방어 +2',f:function(n){return '+'+Math.round(n*2)}},{id:'spd',n:'이동 속도',g:'속',d:'이동 속도 +3',f:function(n){return '+'+Math.round(n*3)}}];
 var SLOTM={x:65,y:470},QUEST={x:235,y:440},FLOORGATE={x:700,y:440},SLOT_MIN=10,SLOT_SYM=['7','★','◆','♥','🍒'],SLOT_W=[15,17,20,23,25],SLOT_TRI=[5,4,3,2.5,2]; /* 슬롯머신 위치 / 최소 배팅 / 그림 / 가중치 / 3개 일치 배당 */
-var AUC_SELL_START=.5,AUC_SELL_FEE=.05,AUC_SELL_STEP=.1,AUC_SELL_TICK=3,AUC_SELL_MAX=3,AUC_DROP_LO=.01,AUC_DROP_HI=.05; /* 판매 시작가 비율 / 수수료 / 입찰당 가격 상승 / 입찰 판정 주기(초) / 최대 등록 수 / 입찰할 때마다 입찰 확률 감소폭 */
+var AUC_SELL_START=.5,AUC_SELL_FEE=.05,AUC_SELL_STEP=.1,AUC_SELL_TICK=3,AUC_SELL_MAX=3,AUC_DROP_LO=.01,AUC_DROP_HI=.05,AUC_SELL_CAP=5000; /* 판매 시작가 비율 / 수수료 / 입찰당 가격 상승 / 입찰 판정 주기(초) / 최대 등록 수 / 입찰할 때마다 입찰 확률 감소폭 */
 var SUMMON={x:850,y:440},SUMMON_COST=10000,PARTY_MAX=3; /* 동료 소환 위치 / 1회 가격 / 출전 인원 */
 var RARN=['일반','희귀','에픽','레전더리','신화'],RARC=['#9aa7b4','#7fb2d9','#c9a0f0','#e0a64a','#ff5fa8'],RARP=[58.9,30,10,1,.1]; /* 등급 이름·색·확률(%) */
 var RP=[1,1.6,2.6,4.2,8],CK={buff:.04,guard:.025,coin:.03},RFD=[300,1000,3000,8000,20000]; /* 등급별 위력 / 패시브 기본값 / ★5 초과 중복 환급 코인 */
@@ -1012,7 +1012,7 @@ function initUT(e){if(NET.on)NET.ut=1;
 function utStartPat(e){
  var last=e.pat,k;do{k=Math.floor(Math.random()*9)}while(k===last);
  e.pat=k;e.pat2=-1;e.round++;e.barSpeed=Math.min(9,UT_SPEED+(e.round-1)*0.65+(G.floor-UT_FLOOR)*0.08);
- if(G.floor>=14&&e.round>=3){do{e.pat2=Math.floor(Math.random()*9)}while(e.pat2===k)}
+ 
  e.us='pat';e.ut_t=-1;e.pdur=Math.min(18,10+(G.floor-UT_FLOOR)*.5+e.round*.4);e.ang=0;
  for(var i=0;i<5;i++)e['c'+i]=0;
  var p=G.p;p.x=UT.x+UT.w/2;p.y=UT.y+UT.h/2;p.inv=Math.max(p.inv,.8);G.ep=[];
@@ -2131,7 +2131,7 @@ function lotInfo(l){
  return {t:'스킬',n:SK[l.id].n,d:SK[l.id].d,g:SK[l.id].g,c:'#c9a0f0'};
 }
 function aucSellHTML(){
- var h='<h4>내 판매 등록 ('+G.sell.length+'/'+AUC_SELL_MAX+')</h4><p class="hint">상점가의 50%에서 시작합니다. 몇 초마다 다른 입찰자가 나타나 가격이 10%씩 오르지만, 입찰이 한 번 들어올 때마다 다음 입찰 확률이 1~5%p씩 떨어집니다. 가끔 큰손이 나타나 5~10배로 부르기도 합니다. 입찰이 끊기면 낙찰되며, 수수료 5%를 뺀 95%를 받습니다.</p>';
+ var h='<h4>내 판매 등록 ('+G.sell.length+'/'+AUC_SELL_MAX+')</h4><p class="hint">상점가의 50%에서 시작합니다 (무기·방어구는 최대 5,000코인). 몇 초마다 다른 입찰자가 나타나 가격이 10%씩 오르지만, 입찰이 한 번 들어올 때마다 다음 입찰 확률이 1~5%p씩 떨어집니다. 가끔 큰손이 나타나 5~10배로 부르기도 합니다. 입찰이 끊기면 낙찰되며, 수수료 5%를 뺀 95%를 받습니다.</p>';
  if(!G.sell.length)h+='<p class="hint">등록한 물품이 없습니다.</p>';
  G.sell.forEach(function(x,i){
   var f=sellInfo(x);
@@ -2140,7 +2140,7 @@ function aucSellHTML(){
  var sl=sellables();
  h+='<h4>판매할 물품 선택 (등록하면 인벤토리에서 빠집니다)</h4><div class="cards">';
  sl.forEach(function(x,i){
-  var base=Math.round(itemPrice(x.k,x.id,x.l)*AUC_SELL_START),nm=sellName(x),f=sellInfo(x);
+  var base=Math.round(itemPrice(x.k,x.id,x.l)*AUC_SELL_START),nm=sellName(x),f=sellInfo(x);if(x.k!=='skill')base=Math.min(AUC_SELL_CAP,base);
   h+=card('lst',x.id,f.g,nm,f.d,{t:x.k==='weapon'?'w':x.k==='armor'?'a':'s',l:x.l,n:x.n,price:fmtN(base)});
  });
  h+='</div>';
@@ -2381,7 +2381,7 @@ $('panel').addEventListener('click',function(ev){
     if(kk==='weapon'){if(--G.wc[id]<=0){delete G.wc[id];delete G.wl[id];G.owned.splice(G.owned.indexOf(id),1)}}
     else if(kk==='armor'){if(--G.ac[id]<=0){delete G.ac[id];delete G.al[id];G.armor.splice(G.armor.indexOf(id),1)}}
     else{G.cp[id].c--;syncSk(id)}
-    var st_=Math.max(1,Math.round(itemPrice(kk,id,ll)*AUC_SELL_START));
+    var st_=Math.max(1,Math.round(itemPrice(kk,id,ll)*AUC_SELL_START));if(kk!=='skill')st_=Math.min(AUC_SELL_CAP,st_);
     G.sell.push({k:kk,id:id,l:ll,start:st_,price:st_,chance:1,bids:0,t:AUC_SELL_TICK,done:false,net:0});
     toast('경매 등록: '+sellName({k:kk,id:id,l:ll})+' ('+fmtN(st_)+'코인부터)');
    }
