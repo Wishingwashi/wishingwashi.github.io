@@ -890,6 +890,34 @@ function doEnhance(){
  var res={out:out,txt:meta.t,c:meta.c,sub:sub,g:inf.g,ic:inf.c};
  setTimeout(function(){E.anim=null;E.last=res;sfx(out==='ok'?'ok':'bad');toast(meta.t+' — '+sub);if(G.ui==='forge')renderPanel()},1900);
 }
+function doEnhance10(){
+ var E=G.enh,k=E.k,id=E.id;
+ if(E.anim||k===null)return;
+ var before=gName(k,id),inf=enhInfo(k,id),n=0,ok=0,fail=0,dn=0,bk=0,spent=0,stop='',x,r,out,cnt,L,mat,cost,left,after;
+ while(n<10){
+  cnt=enhCount(k,id);
+  if(cnt<1){stop=' (강화 대상이 사라져 중단)';break}
+  L=enhLv(k,id);mat=Math.max(0,Math.min(E.mat,cnt-1,ENH_MATMAX));cost=enhCost(k,id,L);
+  if(G.gold<cost){stop=' (코인이 부족해 중단)';break}
+  G.gold-=cost;spent+=cost;
+  if(mat>0){if(k==='skill'){G.cp[id].c-=mat;syncSk(id)}else if(k==='weapon')G.wc[id]-=mat;else G.ac[id]-=mat}
+  r=enhRates(L,mat);x=Math.random();out=x<r.s?'ok':x<r.s+r.dn?'down':x<r.s+r.dn+r.ds?'break':'fail';
+  if(out==='break'&&G.guards>0){G.guards--;out='fail'}
+  n++;
+  if(out==='ok'){enhSet(k,id,L+1);ok++}
+  else if(out==='down'){enhSet(k,id,Math.max(0,L-1));dn++}
+  else if(out==='break'){enhBreak(k,id);bk++}
+  else fail++;
+  left=enhCount(k,id);
+  E.mat=Math.min(E.mat,Math.max(0,Math.min(left-1,ENH_MATMAX)));
+  if(left<1)E.k=null;
+  if(out==='break'){stop=' (망가져서 중단)';break}
+ }
+ if(n===0){toast(stop.indexOf('코인')>=0?'코인이 부족합니다 (필요 '+fmtN(enhCost(k,id,enhLv(k,id)))+')':'강화할 대상이 없습니다');return}
+ after=enhCount(k,id)>0?gName(k,id):'';
+ var res={out:bk>0?'break':ok>0?'ok':'fail',txt:n+'회 연속 강화 완료',c:bk>0?'#cf5b4e':ok>0?'#e0a64a':'#9aa7b4',sub:before+(after?' → '+after:' 소멸')+' · 성공 '+ok+' 실패 '+fail+' 하락 '+dn+' 망가짐 '+bk+' · 코인 '+fmtN(spent)+stop,g:inf.g,ic:inf.c};
+ E.last=res;sfx('anvil');setTimeout(function(){sfx(ok>0?'ok':'bad')},250);toast(res.txt+' — '+res.sub);
+}
 function toast(s){
  var d=document.createElement('div');d.className='toast';d.textContent=s;
  var box=$('toasts');box.appendChild(d);
@@ -1614,7 +1642,7 @@ function update(dt){
  G.en=G.en.filter(function(e){return !e.dead});
  if(p.hp<=0){
   p.hp=0;G.state='dead';sfx('dead');
-  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (레벨·스탯 초기화, 코인·스킬·장비·동료는 유지)';
+  $('deadTxt').textContent='Lv.'+p.lvl+' · 던전 '+G.floor+'층 · 몬스터 '+G.kills+'마리 처치 · 코인 '+G.gold+' (부활하면 레벨 -5 · 최소 Lv.1, 스탯 포인트 재투자, 코인·스킬·장비·동료는 유지)';
   $('dead').hidden=false;if(!(G.duel&&duelLose())&&NET.on){$('deadTxt').textContent+=' — 같은 방 친구가 관 앞에서 Space를 10초간 누르면 부활할 수 있습니다.';netDeath()}
  }
 }
@@ -2196,7 +2224,7 @@ function forgeHTML(){
   h+='<div class="lot" style="--lc:'+inf.c+'"><div class="gem">'+inf.g+'</div><div class="fi"><b>'+gName(k,id)+' → +'+(L+1)+'</b><div class="lvname">'+enhGain(k,id,L)+'</div><div class="lvname">보유 '+cnt+'개 · 재료로 쓸 수 있는 중복 '+Math.max(0,cnt-1)+'개</div></div><div class="lp"><span>1회 강화 비용</span><b>'+fmtN(cost)+'</b></div></div>';
   h+='<div class="rates"><span class="rate" style="--lc:#e0a64a">성공 '+fmtP(r.s)+'</span><span class="rate" style="--lc:#9aa7b4">실패 '+fmtP(r.f)+'</span>'+(r.dn>0?'<span class="rate" style="--lc:#e08a3a">단계 하락 '+fmtP(r.dn)+'</span>':'')+(r.ds>0?'<span class="rate" style="--lc:#cf5b4e">망가짐 '+fmtP(r.ds)+'</span>':'')+'</div>';
   h+='<div class="betrow"><span class="hint" style="margin:0">재료(중복 복사본)</span><button class="btn" data-act="emat" data-l="-100"'+(mat<=0?' disabled':'')+'>0</button><button class="btn" data-act="emat" data-l="-1"'+(mat<=0?' disabled':'')+'>−</button><b style="min-width:2ch;text-align:center">'+mat+'</b><button class="btn" data-act="emat" data-l="1"'+(mat>=av?' disabled':'')+'>+</button><button class="btn" data-act="emat" data-l="100"'+(mat>=av?' disabled':'')+'>최대</button><span class="hint" style="margin:0">'+(av>0?'성공 확률 +'+Math.round(mat*ENH_MAT*100)+'%p (최대 '+av+'개까지)':'중복 복사본이 없습니다')+'</span></div>';
-  h+='<div><button class="btn" data-act="enhgo"'+(G.gold<cost?' disabled':'')+'>망치질! · '+fmtN(cost)+' 코인</button></div>';
+  h+='<div><button class="btn" data-act="enhgo"'+(G.gold<cost?' disabled':'')+'>망치질! · '+fmtN(cost)+' 코인</button><button class="btn" data-act="enhgo10"'+(G.gold<cost?' disabled':'')+'>10회 연속 강화</button></div>';
  }
  h+='<div class="tabs">';
  [['skill','스킬'],['weapon','무기'],['armor','방어구']].forEach(function(t){h+='<button data-act="etab" data-id="'+t[0]+'"'+(E.tab===t[0]?' class="on"':'')+'>'+t[1]+'</button>'});
@@ -2295,6 +2323,8 @@ $('panel').addEventListener('click',function(ev){
  }else if(a==='emat'){
   var E2=G.enh;
   if(!E2.anim&&E2.k!==null){var av2=Math.min(Math.max(0,enhCount(E2.k,E2.id)-1),ENH_MATMAX);E2.mat=clamp(lv===100?av2:lv===-100?0:E2.mat+lv,0,av2)}
+ }else if(a==='enhgo10'){
+  doEnhance10();
  }else if(a==='enhgo'){
   doEnhance();
  }else if(a==='scrl'){
@@ -2422,10 +2452,12 @@ function start(){autoOn=true;G.state='play';$('start').hidden=true;$('dead').hid
 function restart(){if(G.trade)trClose();selfClear();duEnd();
  var o=G,keep={maxFloor:o.maxFloor,quest:o.quest,floorPick:o.floorPick,warps:o.warps,tix:o.tix,guards:o.guards||0,maxLv:o.maxLv,sell:o.sell,comp:o.comp,party:o.party,unl:o.unl,gold:o.gold+aucRefund(o),learned:o.learned,lv:o.lv,cp:o.cp,slots:o.slots,scr:o.scr,scrolls:o.scrolls,ult:o.ult,ultcd:o.ultcd,owned:o.owned,wc:o.wc,wl:o.wl,eq:o.eq,armor:o.armor,ac:o.ac,al:o.al,eqA:o.eqA,floor:(o.floor>=20000?1:o.floor)};
  reset();for(var kx in keep)G[kx]=keep[kx];
- var pp=G.p;pp.lvl=1;pp.xp=0;recalc(true);
+ var pp=G.p;pp.lvl=1;pp.xp=0;
+ {var nl=Math.max(1,o.p.lvl-5),q5;pp.lvl=nl;G.sp=0;for(q5=2;q5<=nl;q5++)G.sp+=statPointsForLevel(q5)}
+ recalc(true);
  syncParty();
  $('panel').hidden=true;$('toasts').innerHTML='';start();if(G.sp>0)toast('스탯 포인트 '+G.sp+'개 — W 키를 눌러 투자하세요')}
-$('btnStart').addEventListener('click',start);
+$('btnStart').addEventListener('click',function(){if(profNewOk())start()});
 $('btnAgain').addEventListener('click',restart);
 
 var MOVE={ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1};
@@ -2434,7 +2466,7 @@ window.addEventListener('keydown',function(e){
  if(MOVE[e.code]||e.code==='Space'||e.code==='Tab'){
   if(G.state==='play'||G.state==='ready')e.preventDefault();
  }
- if(G.state==='ready'&&(e.code==='Enter'||e.code==='Space')){start();return}
+ if(G.state==='ready'&&(e.code==='Enter'||e.code==='Space')){if(!hasSave())start();return}
  if(G.state==='dead'&&e.code==='Enter'){restart();return}
  if(G.state!=='play')return;
  if((e.code==='Space'||e.code==='Enter'||e.code==='KeyZ')&&!e.repeat&&G.scene==='field'&&!G.ui&&utLock()&&G.bo.us==='bar'){utStop(G.bo);return}
@@ -3110,9 +3142,9 @@ function duRecv(d){
  if(typeof from!=='string')return;
  if(a==='req'){
   if(D||G.state!=='play'||G.arena||(G.scene==='field'&&G.bo&&!G.bo.dead)){duSend(from,{a:'dec',r:'상대가 지금은 1v1을 할 수 없습니다'});return}
-  G.duel=duNew(from,String(d.fn||'?').slice(0,10),'in');
+  G.duel=duNew(from,String(d.fn||'?').slice(0,10),'in');G.duel.m=d.m==='risk'?'risk':'safe';
   toast(G.duel.wn+'님이 1v1을 신청했습니다');
-  alertAdd('du',G.duel.wn+'님이 1v1을 신청했습니다',[['수락',duAcc],['거절',duDec]]);
+  alertAdd('du',G.duel.wn+'님이 '+(G.duel.m==='risk'?'⚠ 위험 1v1 (코인 절반·장비·스킬을 걸고)':'안전 1v1')+'을 신청했습니다',[['수락',duAcc],['거절',duDec]]);
   if(G.ui==='duel')renderPanel();
   return;
  }
@@ -3161,27 +3193,33 @@ function duTake(n){
 function duelLose(){
  var D=G.duel,p=G.p,k,hit=D.st==='live'&&Date.now()-D.lastHit<8000;
  if(!hit){duSend(D.w,{a:'cx'});duEnd();return false}
- var half=Math.floor(G.gold/2),w=[],ar=[];
- for(k in G.wc)if(+k>0&&G.wc[k]>0)w.push([+k,G.wc[k]]);
- for(k in G.ac)if(G.ac[k]>0)ar.push([+k,G.ac[k]]);
- duSend(D.w,{a:'lose',l:{g:half,w:w,a:ar,sc:G.scrolls|0,gd:G.guards|0,wp:G.warps|0}});
- G.gold-=half;G.scrolls=0;G.guards=0;G.warps=0;
+ var half=0,w=[],ar=[],sk=[],risk=D.m==='risk';if(risk){half=Math.floor(G.gold/2);for(k in G.wc)if(+k>0&&G.wc[k]>0)w.push([+k,G.wc[k]]);for(k in G.ac)if(G.ac[k]>0)ar.push([+k,G.ac[k]]);for(k in G.cp)if(G.cp[k].c>0)sk.push([+k,G.cp[k].c])}
+ 
+ 
+ duSend(D.w,{a:'lose',l:risk?{g:half,w:w,a:ar,sk:sk,sc:G.scrolls|0,gd:G.guards|0,wp:G.warps|0}:{g:0,w:[],a:[],sk:[],sc:0,gd:0,wp:0}});
+ if(risk){G.gold-=half;G.scrolls=0;G.guards=0;G.warps=0;
+ for(k in G.wc)if(+k>0){delete G.wc[k];delete G.wl[k]}
+ G.owned=[0];if(!G.wc[0])G.wc[0]=1;G.eq=0;
+ G.ac={};G.al={};G.armor=[];G.eqA={head:-1,body:-1,feet:-1,hand:-1};
+ G.learned={};G.lv={};G.cp={};G.scr={};G.slots=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1];G.ult=null;G.usel=[]}
  duEnd();
- $('deadTxt').textContent='1v1에서 패배했습니다 — 코인 '+fmtN(half)+'개와 장비·소모품을 모두 떨어뜨렸습니다 (스킬·동료는 유지). 부활 시 레벨과 스탯이 초기화됩니다.';
+ if(risk){try{var o_=JSON.parse(saveStr()),nl_=Math.max(1,G.p.lvl-5),q_;o_.lvl=nl_;o_.xp=0;o_.st={hp:0,mp:0,atk:0,def:0,spd:0};o_.sp=0;for(q_=2;q_<=nl_;q_++)o_.sp+=statPointsForLevel(q_);var _s=JSON.stringify(o_);localStorage.setItem(SAVE_KEY,_s);autoOn=true;fbPushSoon(_s,true)}catch(e){}}
+ $('deadTxt').textContent=risk?'1v1에서 패배했습니다 — 코인 절반과 장비·스킬·소모품을 모두 잃었습니다 (동료는 유지). 부활하면 레벨이 5 내려갑니다 (최소 Lv.1, 스탯 포인트는 새 레벨에 맞게 다시 투자).':'1v1에서 패배했습니다 — 코인·장비·스킬은 그대로입니다. 부활하면 레벨이 5 내려갑니다 (최소 Lv.1, 스탯 포인트는 새 레벨에 맞게 다시 투자).';
  return true;
 }
 function duWin(l){
  var D=G.duel,e=D&&D.ent,ok=e&&e.x>-500,x=ok?e.x:G.p.x,y=ok?e.y:G.p.y,cnt=0,i;
  l=l||{};
- function put(d){if(cnt++>=90)return;var an=rnd(0,6.28),r=rnd(15,70);d.x=clamp(x+Math.cos(an)*r,20,W-20);d.y=clamp(y+Math.sin(an)*r,20,H-20);d.life=120;d.ph=Math.random()*6;G.dr.push(d)}
+ function put(d){if(cnt++>=300)return;var an=rnd(0,6.28),r=rnd(15,70);d.x=clamp(x+Math.cos(an)*r,20,W-20);d.y=clamp(y+Math.sin(an)*r,20,H-20);d.life=120;d.ph=Math.random()*6;G.dr.push(d)}
  var g=clamp(Math.floor(+l.g)||0,0,1e12),n=Math.min(8,Math.max(1,Math.ceil(g/50000)));
  if(g>0)for(i=0;i<n;i++)put({k:'coin',v:Math.max(1,Math.floor(g/n))});
  (Array.isArray(l.w)?l.w:[]).slice(0,40).forEach(function(q){var id=q?q[0]|0:0,c=Math.min(30,q?q[1]|0:0),j;if(id>0&&id<WP.length)for(j=0;j<c;j++)put({k:'weapon',id:id})});
  (Array.isArray(l.a)?l.a:[]).slice(0,40).forEach(function(q){var id=q?q[0]|0:0,c=Math.min(30,q?q[1]|0:0),j;if(id>=0&&id<AR.length)for(j=0;j<c;j++)put({k:'armor',id:id})});
+ (Array.isArray(l.sk)?l.sk:[]).slice(0,300).forEach(function(q){var id=q?q[0]|0:0,c=clamp(q?q[1]|0:0,0,99);if(id>=0&&id<NSK&&c>0){if(!G.cp[id])G.cp[id]={c:0,e:0};G.cp[id].c+=c;syncSk(id)}});
  var sc=clamp(l.sc|0,0,9999),gd=clamp(l.gd|0,0,9999),wp=clamp(l.wp|0,0,9999);
  G.scrolls+=sc;G.guards+=gd;G.warps+=wp;
- toast('1v1 승리! 상대가 떨어뜨린 코인·장비를 획득했습니다'+(sc+gd+wp>0?' (소모품도 획득)':''));
- G.fx.push({k:'ring',x:G.p.x,y:G.p.y,r:110,t:.6,m:.6,c:'#e0a64a'});
+ toast((l.sk&&l.sk.length)||l.g>0||(l.w&&l.w.length)?'1v1 승리! 상대의 코인·장비·스킬을 획득했습니다':'1v1 승리!');
+ G.fx.push({k:'ring',x:G.p.x,y:G.p.y,r:110,t:.6,m:.6,c:'#e0a64a'});if(D&&D.m==='risk')setTimeout(function(){if(G.state==='play'&&!G.arena)doSave(true)},400);
  duEnd();
 }
 function drawDuel(){
@@ -3194,7 +3232,7 @@ function drawDuel(){
   ctx.font='bold 18px sans-serif';ctx.fillStyle='#fff';ctx.fillText('vs '+D.wn+' — 1v1 준비!',W/2,H*.3+44);
  }else{
   ctx.font='bold 14px sans-serif';ctx.fillStyle='rgba(10,13,17,.8)';ctx.fillRect(W/2-120,56,240,22);
-  ctx.fillStyle='#ff9a8a';ctx.fillText('1v1 진행 중 vs '+D.wn,W/2,67);
+  ctx.fillStyle='#ff9a8a';ctx.fillText((D.m==='risk'?'⚠ 위험 ':'안전 ')+'1v1 진행 중 vs '+D.wn,W/2,67);
  }
  ctx.restore();
 }
@@ -3203,15 +3241,15 @@ function openDuel(){
  openUI('duel');
 }
 function duHTML(){
- var D=G.duel,h='<div class="forge-hero"><h5>◆ 1대1 결투 ◆</h5><p>상대가 수락하면 3초 뒤에 시작합니다. 결투 중에는 서로에게 주는 피해가 1/100로 줄고(몬스터에게는 그대로), 마을로 갈 수 없습니다. 패배하면 관이 생기지 않고, 코인의 절반과 장비·소모품을 모두 떨어뜨려 승자가 가져갑니다. 스킬과 동료는 잃지 않습니다. 어느 층에서나(마을 포함) 신청할 수 있고, 수락하면 전용 아레나로 이동합니다. 아레나에서는 체력·마나가 가득 찬 상태로 시작하며 무승부를 제안할 수 있습니다. 보스전 중에는 할 수 없습니다.</p></div>';
+ var D=G.duel,h='<div class="forge-hero"><h5>◆ 1대1 결투 ◆</h5><p>상대가 수락하면 3초 뒤에 시작합니다. 결투 중에는 서로에게 주는 피해가 1/100로 줄고(몬스터에게는 그대로), 마을로 갈 수 없습니다. 1v1은 두 가지 모드가 있습니다. 안전 1v1은 코인·장비·스킬을 전혀 잃지 않습니다. 위험 1v1은 패배 시 코인의 절반과 장비·스킬·소모품을 모두 잃고 승자가 가져갑니다(동료는 유지). 두 모드 모두 패배하면 관이 생기지 않고, 부활하면 레벨이 5 내려갑니다(최소 Lv.1). 어느 층에서나(마을 포함) 신청할 수 있고, 수락하면 전용 아레나로 이동합니다. 아레나에서는 체력·마나가 가득 찬 상태로 시작하며 무승부를 제안할 수 있습니다. 보스전 중에는 할 수 없습니다.</p></div>';
  if(!NET.on)return h+'<p class="hint">방에 접속해야 합니다.</p>';
  if(D){
   if(D.st==='out')return h+'<p class="hint">'+escH(D.wn)+'님의 수락을 기다리는 중…</p><button class="btn" data-act="du_cx">신청 취소</button>';
-  if(D.st==='in')return h+'<p><b>'+escH(D.wn)+'</b>님이 1v1을 신청했습니다.</p><div class="betrow"><button class="btn" data-act="du_acc">수락</button><button class="btn" data-act="du_dec">거절</button></div>';
+  if(D.st==='in')return h+'<p><b>'+escH(D.wn)+'</b>님이 '+(D.m==='risk'?'<b style="color:#cf5b4e">위험 1v1 (코인 절반·장비·스킬을 걸고)</b>':'안전 1v1')+'을 신청했습니다.</p><div class="betrow"><button class="btn" data-act="du_acc">수락</button><button class="btn" data-act="du_dec">거절</button></div>';
   return h+'<p class="hint">'+escH(D.wn)+'님과 1v1 진행 중입니다.</p>';
  }
  var L=netPlayers();
- h+='<h4>상대 선택</h4>';
+ h+='<div class="tabs"><button data-act="du_mode" data-t="safe"'+(G.duMode==='risk'?'':' class="on"')+'>안전 1v1 (아무것도 잃지 않음)</button><button data-act="du_mode" data-t="risk"'+(G.duMode==='risk'?' class="on"':'')+'>위험 1v1 (코인 절반·장비·스킬을 걸고)</button></div><p class="hint">'+(G.duMode==='risk'?'⚠ 위험 모드: 지면 코인의 절반과 무기·방어구·스킬·소모품을 모두 잃고 승자가 가져갑니다. 상대가 수락해야 시작됩니다.':'안전 모드: 이기든 지든 코인·장비·스킬은 그대로입니다.')+'</p><h4>상대 선택</h4>';
  if(!L.length)return h+'<p class="hint">같은 방에 다른 플레이어가 없습니다.</p>';
  h+='<div class="cards">';
  L.forEach(function(o){h+='<button class="card" data-act="du_pick" data-t="'+escH(o.id)+'"><span class="ic">闘</span><span class="tx"><b>'+escH(String(o.n||'?').slice(0,10))+'</b><span>Lv.'+(o.l|0)+' · 1v1 신청</span></span></button>'});
@@ -3219,6 +3257,7 @@ function duHTML(){
 }
 function duAct(a,c){
  var D=G.duel,t=c.dataset.t;
+ if(a==='du_mode'){G.duMode=t==='risk'?'risk':'safe';return}
  if(a==='du_pick'){
   var pl=netPlayers().filter(function(o){return o.id===t})[0];
   if(D)toast('이미 진행 중인 1v1이 있습니다');
@@ -3226,7 +3265,7 @@ function duAct(a,c){
   else if(utLock())toast('특수 보스전 중에는 신청할 수 없습니다');
   else if(!pl)toast('상대를 찾을 수 없습니다');
   else if(G.arena)toast('이미 아레나에 있습니다');
-  else{G.duel=duNew(pl.id,String(pl.n||'?').slice(0,10),'out');duSend(pl.id,{a:'req'});toast(G.duel.wn+'님에게 1v1을 신청했습니다')}
+  else{G.duel=duNew(pl.id,String(pl.n||'?').slice(0,10),'out');G.duel.m=G.duMode==='risk'?'risk':'safe';duSend(pl.id,{a:'req',m:G.duel.m});toast(G.duel.wn+'님에게 1v1을 신청했습니다')}
   return;
  }
  if(!D)return;
@@ -3342,7 +3381,60 @@ function tutDraw(){
  };
 })();
 /* ---------- 저장 / 이어하기 (패치 4) ---------- */
-var SAVE_KEY='ddsave1',autoOn=false,
+function profNo(){var n=1;try{n=parseInt(localStorage.getItem('ddprof'),10)||1}catch(e){}return n>=1&&n<=3?n:1}
+function profKey(n){n=n||profNo();return n===1?'ddsave1':'ddsave1_p'+n}
+function profDoc(s,t){var n=profNo(),o={v:1,name:(FB.user&&FB.user.displayName)||''};if(n===1){o.data=s;o.time=t||Date.now()}else{o['d'+n]=s;o['t'+n]=t||Date.now()}return o}
+function profView(x){var n=profNo();return n===1?x:{data:x['d'+n],time:x['t'+n]||0}}
+function profNewOk(){
+ if(!hasSave())return true;
+ if(!confirm('프로필 '+profNo()+'에 저장된 게임이 있습니다. 새로 시작하면 이 프로필의 저장이 덮어써집니다 (이전 저장은 「백업 복구」로 되돌릴 수 있게 남겨 둡니다). 정말 새로 시작할까요?'))return false;
+ try{localStorage.setItem(SAVE_KEY+'_bak',localStorage.getItem(SAVE_KEY))}catch(e){}
+ return true;
+}
+function profInit(){
+ var st=$('start'),sb=$('btnStart');if(!st||!sb)return;
+ var box=document.createElement('div');box.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:640px';
+ st.insertBefore(box,st.querySelector('.btn')||sb);
+ function pinfo(n){var s=null;try{s=localStorage.getItem(profKey(n))}catch(e){}if(!s)return null;try{return JSON.parse(s)}catch(e){return {bad:1}}}
+ function pdate(t){try{return t?new Date(t).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}catch(e){return ''}}
+ function prender(){
+  var cur=profNo(),h='<div style="width:100%;text-align:center;font-size:13px;color:#8794a3">프로필 선택</div>',n,o,hb;
+  for(n=1;n<=3;n++){
+   o=pinfo(n);hb=false;try{hb=!!localStorage.getItem(profKey(n)+'_bak')}catch(e){}
+   h+='<div data-pf="'+n+'" style="flex:1;min-width:180px;max-width:205px;border:2px solid '+(n===cur?'#e0a64a':'#262e3a')+';border-radius:8px;padding:8px 10px;background:#151a22;text-align:left;cursor:pointer"><b>프로필 '+n+(n===cur?' ✔':'')+'</b><div style="font-size:12px;color:#8794a3;line-height:1.5">'+(o?(o.bad?'저장 손상':'Lv.'+(o.lvl||1)+' · '+(o.scene==='town'?'마을':(o.floor||1)+'층')+' · 코인 '+fmtN(o.gold||0)+'<br>'+pdate(o.time)):'비어 있음')+'</div>'+(hb?'<button class="btn" data-bak="'+n+'" style="padding:2px 8px;font-size:12px;margin-top:4px">백업 복구</button>':'')+'</div>';
+  }
+  box.innerHTML=h;
+ }
+ box.addEventListener('click',function(ev){
+  var b=ev.target.closest('[data-bak]'),c=ev.target.closest('[data-pf]'),n,k,cur,bak;
+  if(b){
+   n=+b.dataset.bak;k=profKey(n);
+   if(!confirm('프로필 '+n+'을 백업 시점의 저장으로 되돌릴까요? (현재 저장은 새 백업으로 남습니다)'))return;
+   try{bak=localStorage.getItem(k+'_bak');cur=localStorage.getItem(k);localStorage.setItem(k,bak);if(cur)localStorage.setItem(k+'_bak',cur);else localStorage.removeItem(k+'_bak')}catch(e){}
+   if(n===profNo()){autoOn=false;updCont()}
+   prender();return;
+  }
+  if(c){
+   n=+c.dataset.pf;if(n===profNo())return;
+   try{localStorage.setItem('ddprof',String(n))}catch(e){}
+   SAVE_KEY=profKey(n);autoOn=!hasSave();updCont();prender();
+   if(FB&&FB.user)fbSync();
+  }
+ });
+ prender();
+ var row=$('netHost')&&$('netHost').parentNode;
+ if(row){
+  var pb=document.createElement('button');pb.className='btn';pb.style.cssText='padding:4px 12px;font-size:13px';pb.textContent='👤 프로필';
+  pb.onclick=function(){
+   if(G.state==='play'&&!canSave()){toast('지금은 저장할 수 없어 프로필 화면으로 갈 수 없습니다 (1v1·거래 중)');return}
+   if(!confirm('프로필 선택 화면으로 돌아갑니다. 현재 진행 상황은 저장됩니다. 계속할까요?')){cv.focus();return}
+   if(G.state==='play')doSave(true);
+   location.reload();
+  };
+  row.appendChild(pb);
+ }
+}
+var SAVE_KEY=profKey(),autoOn=false,
 SAVE_F=['gold','kills','floor','maxFloor','maxLv','sp','tix','guards','warps','scrolls','ultcd','eq','owned','wc','wl','armor','ac','al','eqA','learned','lv','cp','slots','scr','ult','unl','comp','party','quest','sell','st'];
 function hasSave(){try{return !!localStorage.getItem(SAVE_KEY)}catch(e){return false}}
 function canSave(){return G.state==='play'&&!G.arena&&!(G.trade&&G.trade.esc)}
@@ -3476,7 +3568,7 @@ function updCont(){
 function fbPush(s,loud){
  if(!FB.user||!FB.db||!s)return;
  var t=0;try{t=JSON.parse(s).time||0}catch(e){}
- FB.db.collection('users').doc(FB.user.uid).set({data:s,time:t||Date.now(),v:1,name:FB.user.displayName||''})
+ FB.db.collection('users').doc(FB.user.uid).set(profDoc(s,t),{merge:true})
   .then(function(){if(loud)toast('☁ 구글 계정에 저장했습니다')})
   .catch(function(){toast('☁ 클라우드 저장 실패 — 인터넷과 Firebase 설정을 확인하세요')});
 }
@@ -3488,7 +3580,7 @@ function fbPushSoon(s,loud){
 function fbSync(){
  var u=FB.user;if(!u||!FB.db)return;
  FB.db.collection('users').doc(u.uid).get().then(function(d){
-  var c=d.exists?d.data():null,ls=null,lt=0,ct=c?(c.time||0):0;
+  var c=d.exists?profView(d.data()):null,ls=null,lt=0,ct=c?(c.time||0):0;
   try{ls=localStorage.getItem(SAVE_KEY);if(ls)lt=JSON.parse(ls).time||0}catch(e){ls=null;lt=0}
   if(c&&c.data&&ct>lt){
    if(G.state==='play'){
@@ -3585,6 +3677,7 @@ function recvDrops(d){
  });
 }
 function recvDx(d){if(!d||d.f!==G.floor)return;G.dr.forEach(function(q){if(q.u===d.u)q.life=0})}
+profInit();
 initTitleCheat();
 preloadFonts();
 netInit();
