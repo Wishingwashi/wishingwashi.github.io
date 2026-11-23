@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>단검 던전</title><meta name="claude:viewport-fit-sides" content="cover"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap"><script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>단검 던전</title><meta name="claude:viewport-fit-sides" content="cover"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap"></head><body>
 <style>
 /* Layout: one centered column. Stats strip above a 16:9 canvas stage, ten-slot skill bar below. Dark single-theme dungeon look. */
 :root{
@@ -3040,7 +3040,7 @@ function frame(ts){BGF=performance.now();
  hud();
  requestAnimationFrame(frame);
 }
-var NET={peer:null,conns:[],host:true,on:false,me:'h',others:{},pl:[],sm:{},last:0,eid:0,hits:[],ld:0,nid:0};
+var NET={peer:null,conns:[],host:true,on:false,me:'h',others:{},pl:[],sm:{},last:0,eid:0,hits:[],ld:0,nid:0};var PEER_OPT={"config":{"iceServers":[{"urls":"stun:stun.l.google.com:19302"},{"urls":"stun:stun1.l.google.com:19302"},{"urls":["turn:openrelay.metered.ca:80","turn:openrelay.metered.ca:443","turn:openrelay.metered.ca:443?transport=tcp","turns:openrelay.metered.ca:443?transport=tcp"],"username":"openrelayproject","credential":"openrelayproject"}]},"debug":0};function perr(e){var t=e&&e.type;return ({'network':'서버에 연결할 수 없음(학교 방화벽 가능성)','server-error':'PeerJS 서버 오류(학교 방화벽 가능성)','socket-error':'웹소켓 차단됨(학교 방화벽 가능성)','socket-closed':'웹소켓이 닫힘(학교 방화벽 가능성)','peer-unavailable':'방을 찾을 수 없음 — 방 코드를 확인하세요','unavailable-id':'이미 사용 중인 방 코드','browser-incompatible':'이 브라우저는 WebRTC를 지원하지 않음','webrtc':'WebRTC 오류 — 연결이 차단되었을 수 있음','disconnected':'서버와 연결이 끊김'})[t]||t||'알 수 없는 오류'}function peerLoad(){if(typeof Peer!=='undefined')return;var U=['./peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js','https://fastly.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js','https://gcore.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'],i=0;(function nx(){if(typeof Peer!=='undefined')return;if(i>=U.length){netStatus('PeerJS를 불러오지 못했습니다 — 학교망이 CDN을 막았을 수 있습니다 (peerjs.min.js를 게임 파일과 같은 폴더에 올리세요)');return}var s=document.createElement('script'),d=false,go=function(){if(d)return;d=true;nx()};s.src=U[i++];s.onload=function(){if(typeof Peer==='undefined')go()};s.onerror=go;setTimeout(go,6000);document.head.appendChild(s)})()}peerLoad();
 function cl(){return NET.on&&!G.arena&&!NET.ut&&NET.lc!==NET.me}
 function nick(){var e=$('nick'),n=((e&&e.value)||'').trim().slice(0,10);if(!n)n=NET.dn||(NET.dn='용사'+Math.floor(100+Math.random()*900));try{localStorage.setItem('ddnick',n)}catch(x){}return n}
 try{var sn0=localStorage.getItem('ddnick');if(sn0&&$('nick'))$('nick').value=sn0}catch(e){}
@@ -3176,18 +3176,18 @@ function netBindClient(c){
 function netHost(){
  if(typeof Peer==='undefined'){netStatus('PeerJS를 불러오지 못했습니다. 인터넷 연결과 호스팅 주소를 확인하세요');return}
  netReset();var code=String(Math.floor(1000+Math.random()*9000));
- NET.peer=new Peer('dagger-dungeon-'+code);
+ NET.peer=new Peer('dagger-dungeon-'+code,PEER_OPT);
  NET.peer.on('open',function(){$('netCode').value=code;netStatus('방 코드 '+code+' — 친구들에게 알려 주세요')});
  NET.peer.on('connection',netBindHost);
- NET.peer.on('error',function(e){netStatus('오류: '+(e&&e.type))});
+ NET.peer.on('error',function(e){netStatus('오류: '+perr(e))});
  cv.focus();
 }
 function netJoin(){
  if(typeof Peer==='undefined'){netStatus('PeerJS를 불러오지 못했습니다. 인터넷 연결과 호스팅 주소를 확인하세요');return}
  var code=($('netCode').value||'').trim();if(!code){netStatus('방 코드를 입력하세요');return}
- netReset();NET.peer=new Peer();
- NET.peer.on('open',function(){netStatus('연결 중…');netBindClient(NET.peer.connect('dagger-dungeon-'+code,{reliable:true}))});
- NET.peer.on('error',function(e){netStatus('오류: '+(e&&e.type)+' (방 코드를 확인하세요)')});
+ netReset();NET.peer=new Peer(undefined,PEER_OPT);
+ NET.peer.on('open',function(){netStatus('연결 중…');var cc_=NET.peer.connect('dagger-dungeon-'+code,{reliable:true});netBindClient(cc_);setTimeout(function(){if(NET.peer&&!NET.on&&NET.conns[0]===cc_)netStatus('연결 시간 초과 — 학교망이 WebRTC를 막았을 수 있습니다')},15000)});
+ NET.peer.on('error',function(e){netStatus('오류: '+perr(e))});
  cv.focus();
 }
 function netInit(){chatInit();var h=$('netHost'),j=$('netJoin');if(h)h.onclick=netHost;if(j)j.onclick=netJoin}
@@ -4045,8 +4045,8 @@ function lbEnter(sh){
  if(LB.busy)return;
  if(typeof Peer==='undefined'){netStatus('PeerJS를 불러오지 못해 월드 로비에 접속할 수 없습니다');return}
  LB.busy=true;LB.role='';netReset();
- var id='dagger-dungeon-lobby-'+sh,pr=new Peer(id),done=false;NET.peer=pr;
- netStatus('월드 로비 접속 중… ('+sh+'번 채널)');
+ var id='dagger-dungeon-lobby-'+sh,pr=new Peer(id,PEER_OPT),done=false;NET.peer=pr;
+ netStatus('월드 로비 접속 중… ('+sh+'번 채널)');setTimeout(function(){if(!done&&NET.peer===pr){done=true;LB.busy=false;try{pr.destroy()}catch(x){}NET.peer=null;netStatus('월드 로비 서버 응답 없음 — 학교 방화벽 가능성 (자동 재시도 중)');lbRetry()}},12000);
  pr.on('open',function(){done=true;LB.busy=false;LB.role='host';LB.sh=sh;NET.host=true;netStatus('월드 로비 '+sh+'번 채널 — 내가 방장입니다');toast('월드 로비에 입장했습니다 (방장)')});
  pr.on('connection',function(c){
   if(NET.conns.length>=LB_MAX){c.on('open',function(){send(c,{t:'lbfull'});setTimeout(function(){try{c.close()}catch(e){}},300)});return}
@@ -4056,11 +4056,11 @@ function lbEnter(sh){
   if(done)return;
   done=true;
   if(e&&e.type==='unavailable-id'){try{pr.destroy()}catch(x){}lbJoin(sh,id)}
-  else{LB.busy=false;try{pr.destroy()}catch(x){}NET.peer=null;lbRetry()}
+  else{LB.busy=false;try{pr.destroy()}catch(x){}NET.peer=null;netStatus('월드 로비 접속 실패: '+perr(e)+' (자동 재시도 중)');lbRetry()}
  });
 }
 function lbJoin(sh,id){
- var cp=new Peer(),ok=false;NET.peer=cp;
+ var cp=new Peer(undefined,PEER_OPT),ok=false;NET.peer=cp;
  function fail(){if(ok||NET.peer!==cp)return;LB.busy=false;try{cp.destroy()}catch(x){}NET.peer=null;lbRetry()}
  cp.on('open',function(){
   var c=cp.connect(id,{reliable:true});
@@ -4074,7 +4074,7 @@ function lbJoin(sh,id){
    }
   });
  });
- cp.on('error',fail);
+ cp.on('error',function(e){netStatus('월드 로비 접속 오류: '+perr(e));fail()});
  setTimeout(fail,12000);
 }
 function lbWatch(){
