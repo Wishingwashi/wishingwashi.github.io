@@ -4119,11 +4119,12 @@ function fbSync(){
  var u=FB.user;if(!u||!FB.db)return;
  FB.db.collection('users').doc(u.uid).get().then(function(d){
   /* 구글 계정에 저장된 프로필 1~3이 항상 우선: 로그인하면 이 컴퓨터의 저장을 구글 저장으로 맞춘다 */
-  var cur=profNo(),x=d.exists?d.data():{},got=[],n,cd,ct,k,ls;
+  var cur=profNo(),x=d.exists?d.data():{},got=[],have=[],n,cd,ct,k,ls;
   for(n=1;n<=3;n++){
    cd=n===1?x.data:x['d'+n];ct=(n===1?x.time:x['t'+n])||0;k=profKey(n);ls=null;
    try{ls=localStorage.getItem(k)}catch(e){ls=null}
-   if(!cd){if(ls)fbPushN(n,ls);continue}
+   if(!cd){if(ls){fbPushN(n,ls);toast('☁ 이 컴퓨터의 프로필 '+n+'을 구글 계정에 올렸습니다')}continue}
+   have.push(n);
    if(ls===cd)continue;
    if(n===cur&&G.state==='play'){
     if(confirm('구글 계정에 저장된 프로필 '+n+'이 있습니다. 불러올까요?\n(취소하면 지금 진행 상황이 구글 계정에 덮어써집니다)')){try{if(ls)localStorage.setItem(k+'_bak',ls);localStorage.setItem(k,cd)}catch(e){}loadSave(cd)}
@@ -4139,7 +4140,7 @@ function fbSync(){
     autoOn=false;updCont();if(window.profRender)window.profRender();
    }
    toast('☁ 구글 계정의 프로필 '+got.join(', ')+'번을 불러왔습니다 — 프로필을 골라 「이어하기」를 누르세요');
-  }
+  }else if(!have.length)toast('☁ 이 구글 계정(' +(u.email||u.displayName||'')+')에는 저장된 프로필이 아직 없습니다');
  }).catch(function(e){toast('☁ 클라우드 저장을 불러오지 못했습니다 ('+((e&&e.code)||'오류')+')')});
 }
 function fbSyncOld(){
